@@ -1,0 +1,11 @@
+{
+"build": {
+// Path is relative to the devcontainer.json file.
+"dockerfile": "Dockerfile", 
+"context": ".."  // 👈 use parent folder as build context
+}, 
+"mounts": [
+  "source=/Users/julien/Documents/ETH_local/Digital Humans/Digital-Humans-Project/,target=/app,type=bind,consistency=cached"
+]
+
+}
