@@ -1,12 +1,23 @@
 # instruction for course project
-
 1. install environment according to the readme of hamer (see following).
-2. decompress data in hot3d_data/. train-mp4*.tar is the input video for training. You need to report your result on val-mp4-000000.tar. 
-3. hand labels are in label.tar. You can read them by ```np.load('*.npz')['lhand']``` or ```np.load('*.npz')['rhand']``` (in the world coordinate). The camera extrinsics: ```np.load('*.npz')['cam']```. (cam2world).
-4. The validation hand labels are hidden for testing.
-5. ```python hot3d.py``` to perform inference on hot3d data. ```python video.py``` for evaluation.
-6. hand joint order: see https://github.com/zc-alexfan/arctic/blob/master/docs/data/mano_right.png 
-6. camera intrinsics: for gray-scale videos, fx=fy=236.35 cx=240 cy=300; for color videos, fx=fy=207.87 cx=cy=240. (in the baseline, the camera intrinsics are estimated with networks. you may change them to these GT intrinsics. however, if you find these GT intrinsics wrong, please contact me.)
+2. Install `Eigen`, `Pangolin` and `OpenCV` if you havn't already.
+3. `ORB-SLAM3` requires `openssl` to be installed: `sudo apt-get install libssl-dev`
+4. To install orbslam: `cd ORB-SLAM3-Python`, `pip install .`
+5. Get the orbvoc.txt from here: https://github.com/UZ-SLAMLab/ORB_SLAM3/tree/master/Vocabulary decompress it an store it in the working directory.
+
+# Running the code
+
+1. To get the camera trajectory, adjust the path in orb_slam.py to point to your mp4 files and run.
+```bash
+python3 orb_slam.py
+```
+2. The camera data will be stored in a folder slam_out
+3. To get the metrics run:
+```bash
+python3 hot3d.py
+```
+4. By default it will not use the slam trajectories. 
+5. To enable all the post-processing algorithm, remove the comment for z_corr1, hand_selection and the second pred_hand_joints and remove altbase, which alters the baseline for fair comparison.
 
 
 # HaMeR: Hand Mesh Recovery
