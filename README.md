@@ -2,7 +2,15 @@
 1. install environment according to the readme of hamer (see following).
 2. Install `Eigen`, `Pangolin` and `OpenCV` if you havn't already.
 3. `ORB-SLAM3` requires `openssl` to be installed: `sudo apt-get install libssl-dev`
-4. To install orbslam: `cd ORB-SLAM3-Python`, `pip install .`
+4. Orbslam can only be installed with gcc11
+4. To install orbslam: 
+```bash
+cd ./ORB-SLAM3-Python/third_party/ORB_SLAM3
+chmod +x build.sh
+./build.sh
+cd ./ORB-SLAM3-Python
+pip install .
+```
 5. Get the orbvoc.txt from here: https://github.com/UZ-SLAMLab/ORB_SLAM3/tree/master/Vocabulary decompress it an store it in the working directory.
 
 # Running the code
