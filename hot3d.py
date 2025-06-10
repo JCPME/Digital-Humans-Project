@@ -474,10 +474,10 @@ def process_hamer(nancount, seq_path, save_joints=False, use_slam = False):
     with open(seq_path, 'rb') as f:
         results = pickle.load(f)
 
-    results = altbase(results)              #fills missing hands (disable for validation)
+    #results = altbase(results)              #fills missing hands (disable when applying improvements)
     
-    #results = hand_selection(results)      #select closest hand and fills missing hands
-    #results = z_corr1(results,10,1)        #correct depth estimation
+    results = hand_selection(results)      #select closest hand and fills missing hands
+    results = z_corr1(results,10,1)        #correct depth estimation
    
     
     # first frames where left and right hand has prediction
@@ -509,7 +509,7 @@ def process_hamer(nancount, seq_path, save_joints=False, use_slam = False):
                 left_hand_joints[frame_idx] = hand_joints
 
     pred_hand_joints = np.stack([left_hand_joints, right_hand_joints])  # [2, 60, 21, 3]
-    # pred_hand_joints = butter_lowpass_filter(pred_hand_joints, cutoff=0.25, fs=30, order=2)      #apply butterworth filter
+    pred_hand_joints = butter_lowpass_filter(pred_hand_joints, cutoff=0.32, fs=30, order=2)      #apply butterworth filter
     # print('pred', pred_hand_joints[:, 0])
     valid_hands = valid_hands & gt_hand_visible[None, :]
     valid_hands = valid_hands & has_pred  # [2, 60]
@@ -522,16 +522,16 @@ def process_hamer(nancount, seq_path, save_joints=False, use_slam = False):
         rotation = gt_cam[:,:3,:3]
         translation = gt_cam[:,:3,3]
     pred_hand_joints_world = np.zeros((2, num_frames, 21, 3))
+    
+    if use_slam:                           
+        for j in range(num_frames):
+            rotation[j] = rotation[j].T                             #R_cw to R_wc
+            rotation[j] = Tgt[:3,:3]@rotation[j]                    #Transform to coordinate of gt for fair comparison
+            translation[j] = -rotation[j].T@translation[j]          #t_cw to t_wc
+            translation[j] = Tgt[:3,:3]@translation[j] + Tgt[:3,3]  #Transform to coordinate of gt for fair comparison
     for i in range(2):
         for j in range(num_frames):
-            if use_slam:
-                rotation[j] = rotation[j].T
-                translation[j] = -rotation[j].T@translation[j]
-                translation[j] = Tgt[:3,:3]@translation[j] + Tgt[:3,3]
-                rotation[j] = Tgt[:3,:3]@rotation[j]
-                pred_hand_joints_world[i, j] = pred_hand_joints[i, j] @ rotation[j].T + translation[j]
-            else:
-                pred_hand_joints_world[i, j] = pred_hand_joints[i, j] @ rotation[j].T + translation[j]
+            pred_hand_joints_world[i, j] = pred_hand_joints[i, j] @ rotation[j].T + translation[j]
 
     # canonicalize
     pred_canonical = np.zeros((2, num_frames, 21, 3))
