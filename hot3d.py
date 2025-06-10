@@ -440,6 +440,7 @@ def process_hamer(nancount, seq_path, save_joints=False, use_slam = False):
         with open(slam_file, 'rb') as file:
             data = pickle.load(file)
             gt_cam=data
+        Tgt = gt_labels['cam'][start_frame]
     else:
         gt_cam = gt_labels['cam'][start_frame:end_frame]  # [60, 4, 4] 
     
@@ -508,24 +509,30 @@ def process_hamer(nancount, seq_path, save_joints=False, use_slam = False):
                 left_hand_joints[frame_idx] = hand_joints
 
     pred_hand_joints = np.stack([left_hand_joints, right_hand_joints])  # [2, 60, 21, 3]
-    pred_hand_joints = butter_lowpass_filter(pred_hand_joints, cutoff=0.1, fs=30, order=2)      #apply butterworth filter
+    # pred_hand_joints = butter_lowpass_filter(pred_hand_joints, cutoff=0.25, fs=30, order=2)      #apply butterworth filter
     # print('pred', pred_hand_joints[:, 0])
     valid_hands = valid_hands & gt_hand_visible[None, :]
     valid_hands = valid_hands & has_pred  # [2, 60]
     
     # use camera to world transformation to transform hand joints to world space
-    #rotation = gt_cam[0]
-    #translation = gt_cam[1]
-
-    rotation = gt_cam[:,:3,:3]
-    translation = gt_cam[:,:3,3]
+    if use_slam:
+        rotation = gt_cam[0]
+        translation = gt_cam[1]
+    else:
+        rotation = gt_cam[:,:3,:3]
+        translation = gt_cam[:,:3,3]
     pred_hand_joints_world = np.zeros((2, num_frames, 21, 3))
     for i in range(2):
         for j in range(num_frames):
+            if use_slam:
                 rotation[j] = rotation[j].T
-                translation[j] = -rotation[j]@translation[j]
+                translation[j] = -rotation[j].T@translation[j]
+                translation[j] = Tgt[:3,:3]@translation[j] + Tgt[:3,3]
+                rotation[j] = Tgt[:3,:3]@rotation[j]
                 pred_hand_joints_world[i, j] = pred_hand_joints[i, j] @ rotation[j].T + translation[j]
-    
+            else:
+                pred_hand_joints_world[i, j] = pred_hand_joints[i, j] @ rotation[j].T + translation[j]
+
     # canonicalize
     pred_canonical = np.zeros((2, num_frames, 21, 3))
     gt_canonical = np.zeros((2, num_frames, 21, 3))
@@ -573,7 +580,7 @@ nancount = 0
 results_dir = Path('./out_video')
 result_path_list = list(results_dir.glob('./*/*/results.pkl'))
 for result_path in tqdm(result_path_list):
-    metrics,nancount = process_hamer(nancount, result_path, save_joints=True, use_slam=False)
+    metrics,nancount = process_hamer(nancount, result_path, save_joints=True, use_slam=True)
     print("hammering")
     if metrics_all is None:
         metrics_all = {}
